@@ -1,0 +1,961 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "name": "Restaurant Platform API",
+    "description": "Production-grade Postman collection for testing the Restaurant Discovery, Menus, QR Ordering, Table Reservations, and Admin REST API.\n\n### Usage Guide:\n1. Import this JSON directly into Postman (**File -> Import**).\n2. The collection uses `{{baseUrl}}` (default: `http://localhost:8000/api/v1`).\n3. Execute **Authentication -> Login** to automatically save `accessToken` and `refreshToken` into collection variables.\n4. All subsequent secured endpoints automatically inherit the Bearer token.\n5. Chaining scripts dynamically populate `userId`, `restaurantId`, `restaurantSlug`, `menuId`, `categoryId`, and `menuItemId` as you run requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health & System",
+      "description": "Liveness probes, database connectivity checks, and latency metrics.",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Liveness check verifying FastAPI application is running."
+          },
+          "response": []
+        },
+        {
+          "name": "Database Connectivity & Latency",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health/database",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "database"]
+            },
+            "description": "Tests asynchronous PostgreSQL / Neon connection pool and reports query latency in milliseconds."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication",
+      "description": "User registration and JWT token issuance.",
+      "item": [
+        {
+          "name": "Register New Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set(\"userId\", jsonData.id);",
+                  "    console.log(\"Saved userId:\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer_{{$timestamp}}@example.com\",\n  \"full_name\": \"Alex Mercer\",\n  \"phone\": \"+1-555-019-2834\",\n  \"role\": \"customer\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new customer account. Password is automatically hashed using Argon2id."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Restaurant Owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set(\"ownerId\", jsonData.id);",
+                  "    console.log(\"Saved ownerId:\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner_{{$timestamp}}@restaurant.com\",\n  \"full_name\": \"Marco Rossi\",\n  \"phone\": \"+1-555-888-9900\",\n  \"role\": \"restaurant_owner\",\n  \"password\": \"ChefOwnerSecret2026!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register an account with the `restaurant_owner` role."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Obtain JWT Access & Refresh Tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.access_token);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refresh_token);",
+                  "    console.log(\"Saved accessToken and refreshToken into collection variables!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate user credentials. Automatically updates `accessToken` and `refreshToken` in Postman collection variables."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Users",
+      "description": "User profile retrieval and personal detail updates.",
+      "item": [
+        {
+          "name": "Get User Profile by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Retrieve profile details for a specific user UUID."
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Alexander Mercer\",\n  \"phone\": \"+1-555-999-0011\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Update user profile personal details."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Restaurants",
+      "description": "Restaurant and branch management endpoints.",
+      "item": [
+        {
+          "name": "Create Restaurant with Branches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set(\"restaurantId\", jsonData.id);",
+                  "    pm.collectionVariables.set(\"restaurantSlug\", jsonData.slug);",
+                  "    console.log(\"Saved restaurantId:\", jsonData.id, \"and slug:\", jsonData.slug);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Osteria del Sole {{$timestamp}}\",\n  \"slug\": \"osteria-del-sole-{{$timestamp}}\",\n  \"description\": \"Contemporary Italian trattoria highlighting artisan pasta and regional wines.\",\n  \"logo_url\": \"https://cdn.restaurant.com/logos/osteria.png\",\n  \"cover_image_url\": \"https://cdn.restaurant.com/covers/osteria.jpg\",\n  \"branches\": [\n    {\n      \"name\": \"Midtown Flagship\",\n      \"address_line\": \"450 Lexington Avenue\",\n      \"city\": \"New York\",\n      \"state_or_province\": \"NY\",\n      \"postal_code\": \"10017\",\n      \"country_code\": \"US\",\n      \"latitude\": 40.7527,\n      \"longitude\": -73.9772,\n      \"phone\": \"+1-212-555-0145\"\n    },\n    {\n      \"name\": \"Brooklyn Heights\",\n      \"address_line\": \"112 Montague Street\",\n      \"city\": \"Brooklyn\",\n      \"state_or_province\": \"NY\",\n      \"postal_code\": \"11201\",\n      \"country_code\": \"US\",\n      \"latitude\": 40.6946,\n      \"longitude\": -73.9942,\n      \"phone\": \"+1-718-555-0189\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurants",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants"]
+            },
+            "description": "Create a new restaurant entity with embedded physical branches."
+          },
+          "response": []
+        },
+        {
+          "name": "List Restaurants (Paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.items && jsonData.items.length > 0) {",
+                  "    pm.collectionVariables.set(\"restaurantId\", jsonData.items[0].id);",
+                  "    pm.collectionVariables.set(\"restaurantSlug\", jsonData.items[0].slug);",
+                  "    console.log(\"Saved first restaurant ID:\", jsonData.items[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants?page=1&page_size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (>= 1)"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20",
+                  "description": "Items per page (1-100)"
+                }
+              ]
+            },
+            "description": "Retrieve paginated list of all active restaurants."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Restaurant by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/{{restaurantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants", "{{restaurantId}}"]
+            },
+            "description": "Fetch restaurant by its primary UUID, including all physical branches."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Restaurant by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/by-slug/{{restaurantSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants", "by-slug", "{{restaurantSlug}}"]
+            },
+            "description": "Fetch restaurant by its human-readable URL slug for deep linking."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Restaurant Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description: Multi-award winning modern Italian bistro with seasonal tasting menus.\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/{{restaurantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants", "{{restaurantId}}"]
+            },
+            "description": "Update restaurant details, status, or cover imagery."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Menus",
+      "description": "Digital restaurant menu catalogs and nested categories.",
+      "item": [
+        {
+          "name": "Create Menu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set(\"menuId\", jsonData.id);",
+                  "    console.log(\"Saved menuId:\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"restaurant_id\": \"{{restaurantId}}\",\n  \"name\": \"Autumn Dinner Tasting Menu\",\n  \"description\": \"Five-course chef tasting experience with optional wine pairings.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/menus",
+              "host": ["{{baseUrl}}"],
+              "path": ["menus"]
+            },
+            "description": "Create a new digital menu associated with a restaurant."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Menu by ID (with Categories and Items)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.categories && jsonData.categories.length > 0) {",
+                  "    pm.collectionVariables.set(\"categoryId\", jsonData.categories[0].id);",
+                  "    console.log(\"Saved categoryId:\", jsonData.categories[0].id);",
+                  "    if (jsonData.categories[0].items && jsonData.categories[0].items.length > 0) {",
+                  "        pm.collectionVariables.set(\"menuItemId\", jsonData.categories[0].items[0].id);",
+                  "        console.log(\"Saved menuItemId:\", jsonData.categories[0].items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menus/{{menuId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["menus", "{{menuId}}"]
+            },
+            "description": "Retrieve complete hierarchical menu tree including categories and dish items."
+          },
+          "response": []
+        },
+        {
+          "name": "List Menus for Restaurant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menus/restaurant/{{restaurantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["menus", "restaurant", "{{restaurantId}}"]
+            },
+            "description": "Retrieve all digital menus configured for a given restaurant."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Menu Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Autumn Dinner Tasting Menu (Updated)\",\n  \"status\": \"active\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/menus/{{menuId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["menus", "{{menuId}}"]
+            },
+            "description": "Update menu status (`draft`, `active`, `archived`) or name."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Menu Items",
+      "description": "Dish and product management, pricing, and availability.",
+      "item": [
+        {
+          "name": "Create Menu Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set(\"menuItemId\", jsonData.id);",
+                  "    console.log(\"Saved menuItemId:\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{categoryId}}\",\n  \"name\": \"Handmade Truffle Tagliolini\",\n  \"description\": \"Fresh egg tagliolini with mountain butter, 24-month parmigiano reggiano, and shaved black truffles.\",\n  \"price\": \"28.50\",\n  \"currency\": \"USD\",\n  \"image_url\": \"https://cdn.restaurant.com/dishes/tagliolini.jpg\",\n  \"is_available\": true,\n  \"calories\": 620,\n  \"preparation_time_minutes\": 14\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/menu-items",
+              "host": ["{{baseUrl}}"],
+              "path": ["menu-items"]
+            },
+            "description": "Add a new dish item to a menu category with price in exact decimal format."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Menu Item by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu-items/{{menuItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["menu-items", "{{menuItemId}}"]
+            },
+            "description": "Retrieve specific menu item by its UUID."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Menu Item (86 Availability / Price)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": \"32.00\",\n  \"is_available\": true,\n  \"preparation_time_minutes\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/menu-items/{{menuItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["menu-items", "{{menuItemId}}"]
+            },
+            "description": "Adjust dish price, availability toggle ('86-dish'), or preparation time."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Orders & Reservations (Phase 2 Foundation)",
+      "description": "Foundation endpoints for customer ordering, kitchen tracking, and table bookings.",
+      "item": [
+        {
+          "name": "Orders Service Foundation Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            },
+            "description": "Placeholder verifying orders subsystem foundation readiness."
+          },
+          "response": []
+        },
+        {
+          "name": "Reservations Service Foundation Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": ["{{baseUrl}}"],
+              "path": ["reservations"]
+            },
+            "description": "Placeholder verifying table reservations foundation readiness."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Platform Admin",
+      "description": "Platform-wide analytics, tenant onboarding, and system metrics.",
+      "item": [
+        {
+          "name": "Get Platform Metrics Foundation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Request-ID",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "metrics"]
+            },
+            "description": "Placeholder verifying platform administration subsystem foundation readiness."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Pre-request script to set correlation request ID if missing",
+          "if (!pm.request.headers.has('X-Request-ID')) {",
+          "    pm.request.headers.add({ key: 'X-Request-ID', value: pm.variables.replaceIn('{{$guid}}') });",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "33333333-3333-3333-3333-333333333333",
+      "type": "string"
+    },
+    {
+      "key": "ownerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "restaurantId",
+      "value": "11111111-1111-1111-1111-111111111111",
+      "type": "string"
+    },
+    {
+      "key": "restaurantSlug",
+      "value": "bella-italia-bistro",
+      "type": "string"
+    },
+    {
+      "key": "menuId",
+      "value": "22222222-2222-2222-2222-222222222222",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "type": "string"
+    },
+    {
+      "key": "menuItemId",
+      "value": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "type": "string"
+    }
+  ]
+}

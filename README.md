@@ -114,11 +114,12 @@ make migrate
 make db-seed
 ```
 
-### 4. Verify Endpoints
+### 4. Verify Endpoints & Interactive Testing
 - **Health Check**: `curl http://localhost:8000/api/v1/health`
 - **Database Connectivity**: `curl http://localhost:8000/api/v1/health/database`
-- **Interactive Swagger UI**: Open `http://localhost:8000/docs`
+- **Interactive Swagger UI**: Open `http://localhost:8000/docs` or `http://localhost:8000/swagger` (features interactive JWT **Authorize 🔓** modal, live latency metrics, and tag filtering)
 - **ReDoc**: Open `http://localhost:8000/redoc`
+- **Postman Collection**: Import [postman_collection.json](postman_collection.json) directly into Postman for automated end-to-end chaining and testing.
 
 ---
 
@@ -167,6 +168,100 @@ Code quality standards enforced in CI:
 
 ---
 
-## 7. License
+## 7. Developer Quickstart: Setup, Swagger UI & Postman Testing
+
+Follow this guide to spin up the local environment and test all endpoints interactively or via automated Postman collections.
+
+### 7.1 Local Project Setup
+
+#### 1. Prerequisites
+- [Docker & Docker Compose](https://docs.docker.com/get-docker/) installed and running.
+- [Make](https://www.gnu.org/software/make/) (available by default on macOS and Linux).
+
+#### 2. Launch Local Stack
+Run the following commands in the root directory:
+```bash
+# 1. Start backend, PostgreSQL, and Redis containers in the background
+make up
+
+# 2. Run Alembic database migrations
+make migrate
+
+# 3. Populate database with realistic development seed data
+make db-seed
+```
+*The stack will be up and running at `http://localhost:8000`.*
+
+#### 3. Seeded Accounts for Testing
+The seed script (`database/seeds/01_initial_seed.sql`) provisions the following accounts:
+- **Admin**: `admin@restaurantplatform.com` / `Password123!` (role: `admin`)
+- **Restaurant Owner**: `owner@osteriadelsole.com` / `Password123!` (role: `restaurant_owner`)
+- **Demo Restaurant**: `Osteria Del Sole` (slug: `osteria-del-sole`)
+
+---
+
+### 7.2 Interactive API Testing with Swagger UI
+
+FastAPI provides an interactive OpenAPI / Swagger UI preconfigured with JWT Bearer authentication, real-time tag filtering, and latency metrics.
+
+1. **Access Swagger UI**:
+   - Open your browser to `http://localhost:8000/docs` (or `http://localhost:8000/swagger`).
+2. **Obtain a JWT Access Token**:
+   - In Swagger UI, expand the **Authentication** section.
+   - Click `POST /api/v1/auth/login` -> Click **Try it out**.
+   - Input test credentials:
+     ```json
+     {
+       "email": "owner@osteriadelsole.com",
+       "password": "Password123!"
+     }
+     ```
+   - Click **Execute** and copy the `access_token` string from the JSON response.
+3. **Authorize in Swagger**:
+   - Scroll to the top and click the green **Authorize 🔓** button.
+   - Paste the token into the **Value** input field (without `Bearer ` prefix).
+   - Click **Authorize** -> Click **Close**.
+   - All locked endpoints now display the locked padlock 🔒 and will automatically include your `Authorization: Bearer <token>` header.
+4. **Persistent Session & Observability**:
+   - Authorization persists across browser page refreshes (`persistAuthorization: True`).
+   - Every response displays its unique `X-Request-ID` and server latency in milliseconds.
+
+---
+
+### 7.3 Automated Testing with Postman Collection
+
+A complete, production-grade Postman Collection is provided in the repository root: [`postman_collection.json`](postman_collection.json).
+
+#### 1. Import into Postman
+1. Open the [Postman Desktop App](https://www.postman.com/downloads/) or Web App.
+2. Click **Import** in the top-left corner.
+3. Drag and drop the [`postman_collection.json`](postman_collection.json) file from the project root (or browse to select it).
+4. Click **Import**.
+
+#### 2. Automatic Token & ID Chaining
+The collection is preconfigured with Postman test scripts that automatically capture IDs and tokens so you never have to manually copy-paste:
+- **Step 1: Authenticate**:
+  - Open folder `2. Authentication` -> Select **Login (Obtain JWT Access & Refresh Tokens)**.
+  - Click **Send**.
+  - The embedded test script automatically parses the response and sets the collection variables `accessToken` and `refreshToken`.
+- **Step 2: Run Endpoints**:
+  - All subsequent requests in `Users`, `Restaurants`, `Menus`, and `Menu Items` automatically inherit `{{accessToken}}`.
+  - Creating a restaurant auto-populates `{{restaurantId}}` and `{{restaurantSlug}}`.
+  - Creating a menu auto-populates `{{menuId}}` and `{{categoryId}}`.
+  - Creating a menu item auto-populates `{{menuItemId}}`.
+- **Step 3: Run Full Collection Runner**:
+  - Right-click the **Restaurant Platform API** collection in Postman -> Click **Run collection**.
+  - Click **Run Restaurant Platform API** to execute the entire end-to-end flow with status assertions in seconds.
+
+---
+
+### 7.4 Mobile Application Integration Guide
+For mobile developers building iOS and Android applications for this backend:
+- Refer to the exhaustive [MOBILE_APP_PLAN.md](MOBILE_APP_PLAN.md) in the project root for screen-by-screen API mappings, dual-token refresh interceptor sequence diagrams, offline caching strategy, and Dart/TypeScript type models.
+
+---
+
+## 8. License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
