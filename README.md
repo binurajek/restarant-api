@@ -271,6 +271,10 @@ The collection is preconfigured with Postman test scripts that automatically cap
 For mobile developers building iOS and Android applications for this backend:
 - Refer to the exhaustive [MOBILE_APP_PLAN.md](MOBILE_APP_PLAN.md) in the project root for screen-by-screen API mappings, dual-token refresh interceptor sequence diagrams, offline caching strategy, and Dart/TypeScript type models.
 
+### 7.5 Scale-Out & Load Balancer Architecture (1 Million Users)
+For infrastructure engineers scaling the platform to 1,000,000+ users:
+- Refer to [SCALING_AND_LOAD_BALANCER_PLAN.md](SCALING_AND_LOAD_BALANCER_PLAN.md) for the 5-tier load balancing blueprint (DNS Anycast, CDN/WAF, ALB, Kubernetes Ingress, PgBouncer/HAProxy), production NGINX and HAProxy configs, and database read/write replication topology.
+
 ---
 
 ## 8. License
