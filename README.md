@@ -121,7 +121,19 @@ make db-seed
 - **ReDoc**: Open `http://localhost:8000/redoc`
 - **Postman Collection**: Import [postman_collection.json](postman_collection.json) directly into Postman for automated end-to-end chaining and testing.
 
+### 5. Ports & Services Reference Table
+
+| Service | Container Name | Host Port | Container Port | Protocol | Access URL / Connection String |
+|---|---|:---:|:---:|:---:|---|
+| **FastAPI Backend (API)** | `restaurant_backend` | **`8000`** | `8000` | HTTP | `http://localhost:8000/api/v1` |
+| **Interactive Swagger UI** | `restaurant_backend` | **`8000`** | `8000` | HTTP | `http://localhost:8000/docs` or `http://localhost:8000/swagger` |
+| **ReDoc API Documentation** | `restaurant_backend` | **`8000`** | `8000` | HTTP | `http://localhost:8000/redoc` |
+| **OpenAPI Schema (JSON)** | `restaurant_backend` | **`8000`** | `8000` | HTTP | `http://localhost:8000/openapi.json` |
+| **PostgreSQL 16 Database** | `restaurant_postgres` | **`5432`** | `5432` | TCP | `postgresql://postgres:postgres@localhost:5432/restaurant_db` |
+| **Redis 7 Cache** | `restaurant_redis` | **`6379`** | `6379` | TCP | `redis://localhost:6379/0` |
+
 ---
+
 
 ## 4. Development Workflow & Commands
 
@@ -190,7 +202,7 @@ make migrate
 # 3. Populate database with realistic development seed data
 make db-seed
 ```
-*The stack will be up and running at `http://localhost:8000`.*
+*The stack will be up and running: Backend & Swagger UI on **port 8000**, PostgreSQL on **port 5432**, and Redis on **port 6379**.*
 
 #### 3. Seeded Accounts for Testing
 The seed script (`database/seeds/01_initial_seed.sql`) provisions the following accounts:
