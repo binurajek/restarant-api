@@ -102,17 +102,11 @@ restaurant-platform/
 ```bash
 make up
 ```
-*Behind the scenes, this creates `.env`, builds the backend container, and starts FastAPI, PostgreSQL, and Redis.*
+*Behind the scenes, this creates `.env`, builds the backend container, starts the stack, and **automatically applies migrations and relational seed data** on initial startup.*
 
-### 2. Run Database Migrations
-```bash
-make migrate
-```
+> [!TIP]
+> On the first run, database tables and relational demo data (Admin, Owner, Customer, Restaurant, Branches, Menus, Dishes) are automatically created and seeded. Manual commands `make migrate` and `make db-seed` remain available if you ever want to re-seed or apply custom Alembic revisions.
 
-### 3. Seed Development Data
-```bash
-make db-seed
-```
 
 ### 4. Verify Endpoints & Interactive Testing
 - **Health Check**: `curl http://localhost:8000/api/v1/health`
@@ -274,6 +268,16 @@ For mobile developers building iOS and Android applications for this backend:
 ### 7.5 Scale-Out & Load Balancer Architecture (1 Million Users)
 For infrastructure engineers scaling the platform to 1,000,000+ users:
 - Refer to [SCALING_AND_LOAD_BALANCER_PLAN.md](SCALING_AND_LOAD_BALANCER_PLAN.md) for the 5-tier load balancing blueprint (DNS Anycast, CDN/WAF, ALB, Kubernetes Ingress, PgBouncer/HAProxy), production NGINX and HAProxy configs, and database read/write replication topology.
+
+### 7.6 Continuous Integration & Deployment Pipeline (GitHub Actions)
+The API includes an automated 4-stage pipeline defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) triggered on every push and pull request to `main` or `develop`:
+
+| Pipeline Stage | Tooling | Purpose & Verification |
+| :--- | :--- | :--- |
+| **1. Code Quality & Linting** | `ruff`, `mypy` | Validates code standards, import order, formatting, and strict static type typing across all modules. |
+| **2. Security & Vulnerability Scan** | `bandit`, `pip-audit` | Analyzes Python AST for security vulnerabilities and checks dependencies against known CVEs. |
+| **3. Automated Unit & Integration Tests** | `pytest`, `pytest-cov`, `pytest-asyncio` | Runs unit and repository integration test suite with coverage reporting. |
+| **4. Live Docker Stack & Postman E2E** | `docker compose`, `newman`, `curl` | Boots live stack (`FastAPI`, `PostgreSQL 16`, `Redis 7`), checks `/api/v1/health`, runs auto-migrations, and executes the complete 22-request Postman test suite via Newman CLI. |
 
 ---
 

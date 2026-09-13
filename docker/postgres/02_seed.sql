@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Initial Development Seed Data
+-- PostgreSQL Initialization: Initial Relational Seed Data
 -- ==============================================================================
 
 -- 1. Insert Initial Platform Users (Password: "Password123!")
@@ -49,7 +49,7 @@ VALUES
   )
 ON CONFLICT (email) DO NOTHING;
 
--- 2. Insert Demo Restaurant
+-- 2. Insert Demo Restaurant (Linked to owner Giovanni Rossi)
 INSERT INTO restaurants (id, name, slug, description, logo_url, cover_image_url, status, is_active, owner_id, created_at, updated_at)
 VALUES
   (
@@ -67,7 +67,7 @@ VALUES
   )
 ON CONFLICT (slug) DO NOTHING;
 
--- 3. Insert Restaurant Branches
+-- 3. Insert Restaurant Branches (Linked to Osteria Del Sole)
 INSERT INTO restaurant_branches (id, restaurant_id, name, address_line, city, state_or_province, postal_code, country_code, latitude, longitude, phone, is_active, created_at, updated_at)
 VALUES
   (
@@ -104,7 +104,7 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
--- 4. Insert Menu
+-- 4. Insert Menu (Linked to Osteria Del Sole)
 INSERT INTO menus (id, restaurant_id, name, description, status, is_active, created_at, updated_at)
 VALUES
   (
@@ -119,7 +119,7 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
--- 5. Insert Categories
+-- 5. Insert Categories (Linked to Dinner & Evening Menu)
 INSERT INTO menu_categories (id, menu_id, name, description, display_order, created_at, updated_at)
 VALUES
   ('e0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001', 'Antipasti', 'Starters and sharing platters', 1, NOW(), NOW()),
@@ -128,7 +128,7 @@ VALUES
   ('e0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000001', 'Dolci', 'Desserts and sweets', 4, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 6. Insert Menu Items
+-- 6. Insert Menu Items (Linked to Categories with Exact Pricing)
 INSERT INTO menu_items (id, category_id, name, description, price, currency, is_available, calories, preparation_time_minutes, created_at, updated_at)
 VALUES
   (

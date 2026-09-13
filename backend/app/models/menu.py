@@ -31,7 +31,12 @@ class Menu(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[MenuStatus] = mapped_column(
-        SQLEnum(MenuStatus, native_enum=False, values_callable=lambda obj: [e.value for e in obj], length=32),
+        SQLEnum(
+            MenuStatus,
+            native_enum=False,
+            values_callable=lambda obj: [e.value for e in obj],
+            length=32,
+        ),
         default=MenuStatus.ACTIVE,
         nullable=False,
     )

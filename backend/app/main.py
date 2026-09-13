@@ -2,7 +2,6 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-
 from typing import Any
 
 from fastapi import FastAPI
@@ -13,6 +12,7 @@ from fastapi.responses import RedirectResponse
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
+from app.database.seed import init_and_seed_database
 from app.database.session import async_engine
 from app.middleware import (
     RequestIDMiddleware,
@@ -69,6 +69,10 @@ OPENAPI_TAGS: list[dict[str, Any]] = [
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Application lifespan manager for graceful resource startup and teardown."""
     logger.info("Starting up %s (env: %s)", settings.APP_NAME, settings.APP_ENV.value)
+    try:
+        await init_and_seed_database()
+    except Exception as exc:
+        logger.warning("Startup database initialization/seeding encountered an issue: %s", exc)
     yield
     logger.info("Shutting down %s: Disposing database connection pool...", settings.APP_NAME)
     await async_engine.dispose()
@@ -163,4 +167,3 @@ def create_application() -> FastAPI:
 
 
 app = create_application()
-

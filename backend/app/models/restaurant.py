@@ -29,7 +29,12 @@ class Restaurant(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     cover_image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     status: Mapped[RestaurantStatus] = mapped_column(
-        SQLEnum(RestaurantStatus, native_enum=False, values_callable=lambda obj: [e.value for e in obj], length=32),
+        SQLEnum(
+            RestaurantStatus,
+            native_enum=False,
+            values_callable=lambda obj: [e.value for e in obj],
+            length=32,
+        ),
         default=RestaurantStatus.ACTIVE,
         nullable=False,
     )

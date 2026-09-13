@@ -24,12 +24,22 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     role: Mapped[UserRole] = mapped_column(
-        SQLEnum(UserRole, native_enum=False, values_callable=lambda obj: [e.value for e in obj], length=32),
+        SQLEnum(
+            UserRole,
+            native_enum=False,
+            values_callable=lambda obj: [e.value for e in obj],
+            length=32,
+        ),
         default=UserRole.CUSTOMER,
         nullable=False,
     )
     status: Mapped[UserStatus] = mapped_column(
-        SQLEnum(UserStatus, native_enum=False, values_callable=lambda obj: [e.value for e in obj], length=32),
+        SQLEnum(
+            UserStatus,
+            native_enum=False,
+            values_callable=lambda obj: [e.value for e in obj],
+            length=32,
+        ),
         default=UserStatus.ACTIVE,
         nullable=False,
     )
